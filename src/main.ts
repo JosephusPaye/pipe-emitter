@@ -2,7 +2,7 @@ import mitt, { Emitter } from 'mitt';
 import net from 'net';
 
 export type PipeError = Error & {
-  type: 'SEND_ERROR' | 'RECEIVE_ERROR' | 'SOCKET_ERROR';
+  type: 'SEND_ERROR' | 'RECEIVE_ERROR' | 'SERVER_ERROR' | 'SOCKET_ERROR';
 };
 export type EventType = string | symbol;
 export type Handler<T = any> = (event?: T) => void;
@@ -15,6 +15,12 @@ type Socket = net.Socket & {
   readonly readyState: 'opening' | 'open' | 'readOnly' | 'writeOnly';
 };
 
+const PACKET_DELIMITER = '<<pipe-emitter>>';
+
+/**
+ * A server for creating IPC pipes (UNIX domain pipes or named pipes on Windows).
+ * Supports bi-directional communication with clients that connect.
+ */
 export class Server {
   private clients: Set<Socket>;
   private server: net.Server;
@@ -24,6 +30,13 @@ export class Server {
   private onClose?: CloseListener;
   private onConnect?: ConnectListener;
 
+  /**
+   * Create a new pipe server that clients can connect to. See [the Node.js docs](https://nodejs.org/docs/latest-v14.x/api/net.html#net_identifying_paths_for_ipc_connections)
+   * for pipe name format and valid characters.
+   *
+   * @param pipeName The name of the pipe, globally unique at the OS level
+   * @param options
+   */
   constructor(
     pipeName: string,
     options: {
@@ -32,6 +45,10 @@ export class Server {
       onClose?: CloseListener;
     }
   ) {
+    if (typeof options.onError !== 'function') {
+      throw new TypeError('options.onError is required and must be a function');
+    }
+
     this.clients = new Set();
     this.emitter = mitt();
 
@@ -44,16 +61,30 @@ export class Server {
       this.onConnection(clientSocket);
     });
 
+    this.server.on('error', (err) => {
+      (err as any).type = 'SERVER_ERROR';
+      this.onError(err as PipeError);
+    });
+
     this.server.listen(this.pipeName);
   }
 
+  /**
+   * Handle a new client connection.
+   */
   private onConnection(client: Socket) {
     this.clients.add(client);
 
-    client.on('data', (data) => {
+    client.on('data', (buffer) => {
       try {
-        const json = JSON.parse(data.toString());
-        this.emitter.emit(json.event, json.data);
+        const packets = buffer.toString().split(PACKET_DELIMITER);
+
+        for (const packet of packets) {
+          if (packet) {
+            const json = JSON.parse(packet);
+            this.emitter.emit(json.event, json.data);
+          }
+        }
       } catch (err) {
         err.type = 'RECEIVE_ERROR';
         this.onError(err);
@@ -71,12 +102,10 @@ export class Server {
     });
 
     this.onConnect?.();
-
-    this.emit('greeting', 'oh hai client');
   }
 
   /**
-   * Get the number of clients connected to this server.
+   * Get the number of clients connected to this pipe.
    */
   clientCount() {
     return this.clients.size;
@@ -85,13 +114,13 @@ export class Server {
   /**
    * Emit the given event and data unto the pipe.
    *
-   * @param {string|symbol} type The event type
-   * @param {Any} [evt] Any value (object is recommended), passed to each handler
+   * @param {string|symbol} event The event type
+   * @param {Any} [data] Any value (object is recommended), passed to each handler
    */
-  emit<T = any>(type: EventType, event?: T): void {
+  emit<T = any>(event: EventType, data?: T): void {
     for (const client of this.clients) {
       if (client.readyState === 'open' || client.readyState === 'writeOnly') {
-        client.write(JSON.stringify({ event: type, data: event }));
+        client.write(JSON.stringify({ event, data }) + PACKET_DELIMITER);
       } else {
         const err = new Error('Client socket not open or writable');
         (err as PipeError).type = 'SEND_ERROR';
@@ -101,7 +130,7 @@ export class Server {
   }
 
   /**
-   * Register an event handler for the given type.
+   * Register an event handler for the given type on this pipe.
    *
    * @param {string|symbol} type Type of event to listen for, or `"*"` for all events
    * @param {Function} handler Function to call in response to given event
@@ -111,7 +140,7 @@ export class Server {
   }
 
   /**
-   * Remove an event handler for the given type.
+   * Remove an event handler for the given type on this pipe.
    *
    * @param {string|symbol} type Type of event to unregister `handler` from, or `"*"`
    * @param {Function} handler Handler function to remove
@@ -119,8 +148,43 @@ export class Server {
   off<T = any>(type: EventType, handler: Handler<T>) {
     this.emitter.off(type, handler);
   }
+
+  /**
+   * Remove all event listeners.
+   */
+  allOff() {
+    this.emitter.all.clear();
+  }
+
+  /**
+   * Close the pipe and clear event listeners.
+   */
+  async close() {
+    this.emitter.all.clear();
+
+    for (const pipe of this.clients) {
+      pipe.end();
+    }
+
+    this.clients.clear();
+    this.server.removeAllListeners();
+
+    await new Promise((resolve, reject) => {
+      this.server.close((err) => {
+        if (err) {
+          reject(err);
+        }
+
+        resolve();
+      });
+    });
+  }
 }
 
+/**
+ * A client for connecting to IPC pipes (UNIX domain pipes or named pipes on Windows).
+ * Supports bi-directional communication with the server it's connected to.
+ */
 export class Client {
   private server: Socket;
   private pipeName: string;
@@ -129,6 +193,12 @@ export class Client {
   private onConnect?: ConnectListener;
   private onClose?: CloseListener;
 
+  /**
+   * Create a new pipe client and connect it to the given pipe.
+   *
+   * @param pipeName The name of the pipe to connect to
+   * @param options
+   */
   constructor(
     pipeName: string,
     options: {
@@ -137,9 +207,12 @@ export class Client {
       onClose?: CloseListener;
     }
   ) {
+    if (typeof options.onError !== 'function') {
+      throw new TypeError('options.onError is required and must be a function');
+    }
+
     this.emitter = mitt();
 
-    this.onError = options.onError;
     this.onError = options.onError;
     this.onConnect = options.onConnect;
     this.onClose = options.onClose;
@@ -150,11 +223,20 @@ export class Client {
     }) as Socket;
   }
 
+  /**
+   * Handle a connection to the server.
+   */
   private onConnection(server: Socket) {
-    server.on('data', (data) => {
+    server.on('data', (buffer) => {
       try {
-        const json = JSON.parse(data.toString());
-        this.emitter.emit(json.event, json.data);
+        const packets = buffer.toString().split(PACKET_DELIMITER);
+
+        for (const packet of packets) {
+          if (packet) {
+            const json = JSON.parse(packet);
+            this.emitter.emit(json.event, json.data);
+          }
+        }
       } catch (err) {
         err.type = 'RECEIVE_ERROR';
         this.onError(err);
@@ -171,22 +253,20 @@ export class Client {
     });
 
     this.onConnect?.();
-
-    this.emit('greeting', 'oh hai server');
   }
 
   /**
    * Emit the given event and data unto the pipe.
    *
-   * @param {string|symbol} type The event type
-   * @param {Any} [evt] Any value (object is recommended), passed to each handler
+   * @param {string|symbol} event The event type
+   * @param {Any} [data] Any value (object is recommended), passed to each handler
    */
-  emit<T = any>(type: EventType, event?: T): void {
+  emit<T = any>(event: EventType, data?: T): void {
     if (
       this.server.readyState == 'open' ||
       this.server.readyState == 'writeOnly'
     ) {
-      this.server.write(JSON.stringify({ event: type, data: event }));
+      this.server.write(JSON.stringify({ event, data }) + PACKET_DELIMITER);
     } else {
       const err = new Error('Server socket not open or writable');
       (err as PipeError).type = 'SEND_ERROR';
@@ -195,7 +275,7 @@ export class Client {
   }
 
   /**
-   * Register an event handler for the given type.
+   * Register an event handler for the given type on this pipe.
    *
    * @param {string|symbol} type Type of event to listen for, or `"*"` for all events
    * @param {Function} handler Function to call in response to given event
@@ -205,12 +285,27 @@ export class Client {
   }
 
   /**
-   * Remove an event handler for the given type.
+   * Remove an event handler for the given type on this pipe.
    *
    * @param {string|symbol} type Type of event to unregister `handler` from, or `"*"`
    * @param {Function} handler Handler function to remove
    */
   off<T = any>(type: EventType, handler: Handler<T>) {
     this.emitter.off(type, handler);
+  }
+
+  /**
+   * Remove all event listeners.
+   */
+  allOff() {
+    this.emitter.all.clear();
+  }
+
+  /**
+   * Close the pipe and clear event listeners.
+   */
+  close() {
+    this.emitter.all.clear();
+    this.server.end();
   }
 }

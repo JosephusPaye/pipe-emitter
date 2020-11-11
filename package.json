@@ -1,7 +1,7 @@
 {
   "name": "@josephuspaye/pipe-emitter",
   "version": "0.0.0",
-  "description": "An event emitter that works over named pipes on Windows.",
+  "description": "An inter-process event emitter that uses UNIX domain sockets (Linux, macOS) and named pipes (Windows).",
   "main": "dist/main.js",
   "types": "dist/main.d.ts",
   "repository": "https://github.com/JosephusPaye/pipe-emitter.git",
@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "uvu -r esm tests/",
+    "test": "uvu -r esm tests/ -i util.js",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.js\" \"*.{js,json,md}\"",
     "format:check": "prettier --list-different \"src/**/*.ts\" \"tests/**/*.js\" \"*.{js,json,md}\""
   },
