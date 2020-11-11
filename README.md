@@ -15,10 +15,10 @@ npm install @josephuspaye/pipe-emitter --save
 The following example shows how to use `pipe-emitter` to communicate between two processes:
 
 <details>
-<summary>View process A (server.js)</summary>
+<summary>View server.js</summary>
 
 ```js
-// Process A (server.js): opens up a pipe for client connections
+// server.js: creates a pipe for client connections
 
 import { Server } from '..';
 
@@ -52,10 +52,10 @@ console.log('pipe server started');
 </details>
 
 <details>
-<summary>View process B (client.js)</summary>
+<summary>View client.js</summary>
 
 ```js
-// Process B (client.js): connects to an open pipe
+// client.js: connects to an open pipe
 
 import { Client } from '..';
 
@@ -114,6 +114,9 @@ disconnected from server
 ### `Server` class
 
 A server for creating IPC pipes (UNIX domain pipes or named pipes on Windows). Supports bi-directional communication with clients that connect. See [Types](#types) below for additional types.
+
+<details>
+<summary>View details</summary>
 
 ```ts
 class Server {
@@ -174,9 +177,14 @@ class Server {
 }
 ```
 
+</details>
+
 ### `Client` class
 
 A client for connecting to IPC pipes (UNIX domain pipes or named pipes on Windows). Supports bi-directional communication with the server it's connected to. See [Types](#types) below for additional types.
+
+<details>
+<summary>View details</summary>
 
 ```ts
 class Client {
@@ -231,6 +239,8 @@ class Client {
   close(): void;
 }
 ```
+
+</details>
 
 ### Types
 
