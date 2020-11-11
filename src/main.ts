@@ -27,7 +27,7 @@ export class Server {
   private pipeName: string;
   private emitter: Emitter;
   private onError: ErrorListener;
-  private onClose?: CloseListener;
+  private onDisconnect?: CloseListener;
   private onConnect?: ConnectListener;
 
   /**
@@ -42,7 +42,7 @@ export class Server {
     options: {
       onError: ErrorListener;
       onConnect?: ConnectListener;
-      onClose?: CloseListener;
+      onDisconnect?: CloseListener;
     }
   ) {
     if (typeof options.onError !== 'function') {
@@ -54,7 +54,7 @@ export class Server {
 
     this.onError = options.onError;
     this.onConnect = options.onConnect;
-    this.onClose = options.onClose;
+    this.onDisconnect = options.onDisconnect;
 
     this.pipeName = `\\\\.\\pipe\\${pipeName}`;
     this.server = (net.createServer as any)((clientSocket: Socket) => {
@@ -98,7 +98,7 @@ export class Server {
 
     client.on('close', (hadError: boolean) => {
       this.clients.delete(client);
-      this.onClose?.(hadError);
+      this.onDisconnect?.(hadError);
     });
 
     this.onConnect?.();
@@ -112,7 +112,8 @@ export class Server {
   }
 
   /**
-   * Emit the given event and data unto the pipe.
+   * Emit the given event and data unto the pipe. Will throw an error of type "SEND_ERROR"
+   * if a client socket is not writable (e.g. not ready or already closed).
    *
    * @param {string|symbol} event The event type
    * @param {Any} [data] Any value (object is recommended), passed to each handler
@@ -191,7 +192,7 @@ export class Client {
   private emitter: Emitter;
   private onError: ErrorListener;
   private onConnect?: ConnectListener;
-  private onClose?: CloseListener;
+  private onDisconnect?: CloseListener;
 
   /**
    * Create a new pipe client and connect it to the given pipe.
@@ -204,7 +205,7 @@ export class Client {
     options: {
       onError: ErrorListener;
       onConnect?: ConnectListener;
-      onClose?: CloseListener;
+      onDisconnect?: CloseListener;
     }
   ) {
     if (typeof options.onError !== 'function') {
@@ -215,7 +216,7 @@ export class Client {
 
     this.onError = options.onError;
     this.onConnect = options.onConnect;
-    this.onClose = options.onClose;
+    this.onDisconnect = options.onDisconnect;
 
     this.pipeName = `\\\\.\\pipe\\${pipeName}`;
     this.server = net.createConnection(this.pipeName, () => {
@@ -249,14 +250,15 @@ export class Client {
     });
 
     server.on('close', (hadError: boolean) => {
-      this.onClose?.(hadError);
+      this.onDisconnect?.(hadError);
     });
 
     this.onConnect?.();
   }
 
   /**
-   * Emit the given event and data unto the pipe.
+   * Emit the given event and data unto the pipe. Will throw an error of type "SEND_ERROR"
+   * if the server socket is not writable (e.g. not ready or already closed).
    *
    * @param {string|symbol} event The event type
    * @param {Any} [data] Any value (object is recommended), passed to each handler

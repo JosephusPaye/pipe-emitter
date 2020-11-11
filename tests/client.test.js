@@ -82,7 +82,7 @@ test('triggers the onConnect() callback when connected to the server', async () 
   });
 });
 
-test('triggers the onClose() callback when the server connection is closed', async () => {
+test('triggers the onDisconnect() callback when the server connection is closed', async () => {
   await asyncTest(({ done, useServer, useClient }) => {
     useServer('pipe-emitter-test', {
       onError() {},
@@ -93,7 +93,7 @@ test('triggers the onClose() callback when the server connection is closed', asy
 
     const client = useClient('pipe-emitter-test', {
       onError() {},
-      onClose(hadError) {
+      onDisconnect(hadError) {
         assert.is(
           hadError,
           false,
@@ -114,7 +114,7 @@ test('triggers the onClose() callback when the server connection is closed', asy
 
     const client = useClient('pipe-emitter-test', {
       onError() {},
-      onClose(hadError) {
+      onDisconnect(hadError) {
         assert.is(
           hadError,
           true,
