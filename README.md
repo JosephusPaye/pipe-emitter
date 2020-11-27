@@ -119,7 +119,7 @@ A server for creating IPC pipes (UNIX domain pipes or named pipes on Windows). S
 <summary>View details</summary>
 
 ```ts
-class Server {
+class Server<TSend = any, TReceive = any> {
   /**
    * Create a new pipe server that clients can connect to. See [the Node.js docs](https://nodejs.org/docs/latest-v14.x/api/net.html#net_identifying_paths_for_ipc_connections) for pipe name format and valid characters.
    *
@@ -144,26 +144,26 @@ class Server {
    * Emit the given event and data unto the pipe. Will throw an error of type "SEND_ERROR"
    * if a client socket is not writable (e.g. not ready or already closed).
    *
-   * @param {string|symbol} event The event type
-   * @param {Any} [data] Any value (object is recommended), passed to each handler
+   * @param event The event type
+   * @param data  Any value (object is recommended), passed to each handler
    */
-  emit<T = any>(event: EventType, data?: T): void;
+  emit<T = TSend>(event: EventType, data?: T): void;
 
   /**
    * Register an event handler for the given type on this pipe.
    *
-   * @param {string|symbol} type Type of event to listen for, or `"*"` for all events
-   * @param {Function} handler Function to call in response to given event
+   * @param type    Type of event to listen for, or `"*"` for all events
+   * @param handler Function to call in response to given event
    */
-  on<T = any>(type: EventType, handler: Handler<T>): void;
+  on<T = TReceive>(type: EventType, handler: Handler<T>): void;
 
   /**
    * Remove an event handler for the given type on this pipe.
    *
-   * @param {string|symbol} type Type of event to unregister `handler` from, or `"*"`
-   * @param {Function} handler Handler function to remove
+   * @param type    Type of event to unregister `handler` from, or `"*"`
+   * @param handler Handler function to remove
    */
-  off<T = any>(type: EventType, handler: Handler<T>): void;
+  off<T = TReceive>(type: EventType, handler: Handler<T>): void;
 
   /**
    * Remove all event listeners.
@@ -187,7 +187,7 @@ A client for connecting to IPC pipes (UNIX domain pipes or named pipes on Window
 <summary>View details</summary>
 
 ```ts
-class Client {
+class Client<TSend = any, TReceive = any> {
   /**
    * Create a new pipe client and connect it to the given pipe.
    *
@@ -207,26 +207,26 @@ class Client {
    * Emit the given event and data unto the pipe. Will throw an error of type "SEND_ERROR"
    * if the server socket is not writable (e.g. not ready or already closed).
    *
-   * @param {string|symbol} event The event type
-   * @param {Any} [data] Any value (object is recommended), passed to each handler
+   * @param event The event type
+   * @param data  Any value (object is recommended), passed to each handler
    */
-  emit<T = any>(event: EventType, data?: T): void;
+  emit<T = TSend>(event: EventType, data?: T): void;
 
   /**
    * Register an event handler for the given type on this pipe.
    *
-   * @param {string|symbol} type Type of event to listen for, or `"*"` for all events
-   * @param {Function} handler Function to call in response to given event
+   * @param type    Type of event to listen for, or `"*"` for all events
+   * @param handler Function to call in response to given event
    */
-  on<T = any>(type: EventType, handler: Handler<T>): void;
+  on<T = TReceive>(type: EventType, handler: Handler<T>): void;
 
   /**
    * Remove an event handler for the given type on this pipe.
    *
-   * @param {string|symbol} type Type of event to unregister `handler` from, or `"*"`
-   * @param {Function} handler Handler function to remove
+   * @param type    Type of event to unregister `handler` from, or `"*"`
+   * @param handler Handler function to remove
    */
-  off<T = any>(type: EventType, handler: Handler<T>): void;
+  off<T = TReceive>(type: EventType, handler: Handler<T>): void;
 
   /**
    * Remove all event listeners.

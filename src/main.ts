@@ -21,7 +21,7 @@ const PACKET_DELIMITER = '<<pipe-emitter>>';
  * A server for creating IPC pipes (UNIX domain pipes or named pipes on Windows).
  * Supports bi-directional communication with clients that connect.
  */
-export class Server {
+export class Server<TSend = any, TReceive = any> {
   private clients: Set<Socket>;
   private server: net.Server;
   private pipeName: string;
@@ -82,7 +82,7 @@ export class Server {
         for (const packet of packets) {
           if (packet) {
             const json = JSON.parse(packet);
-            this.emitter.emit(json.event, json.data);
+            this.emitter.emit<TReceive>(json.event, json.data);
           }
         }
       } catch (err) {
@@ -118,7 +118,7 @@ export class Server {
    * @param {string|symbol} event The event type
    * @param {Any} [data] Any value (object is recommended), passed to each handler
    */
-  emit<T = any>(event: EventType, data?: T): void {
+  emit<T = TSend>(event: EventType, data?: T): void {
     for (const client of this.clients) {
       if (client.readyState === 'open' || client.readyState === 'writeOnly') {
         client.write(JSON.stringify({ event, data }) + PACKET_DELIMITER);
@@ -136,7 +136,7 @@ export class Server {
    * @param {string|symbol} type Type of event to listen for, or `"*"` for all events
    * @param {Function} handler Function to call in response to given event
    */
-  on<T = any>(type: EventType, handler: Handler<T>) {
+  on<T = TReceive>(type: EventType, handler: Handler<T>) {
     this.emitter.on(type, handler);
   }
 
@@ -146,7 +146,7 @@ export class Server {
    * @param {string|symbol} type Type of event to unregister `handler` from, or `"*"`
    * @param {Function} handler Handler function to remove
    */
-  off<T = any>(type: EventType, handler: Handler<T>) {
+  off<T = TReceive>(type: EventType, handler: Handler<T>) {
     this.emitter.off(type, handler);
   }
 
@@ -186,7 +186,7 @@ export class Server {
  * A client for connecting to IPC pipes (UNIX domain pipes or named pipes on Windows).
  * Supports bi-directional communication with the server it's connected to.
  */
-export class Client {
+export class Client<TSend = any, TReceive = any> {
   private server: Socket;
   private pipeName: string;
   private emitter: Emitter;
@@ -231,7 +231,7 @@ export class Client {
         for (const packet of packets) {
           if (packet) {
             const json = JSON.parse(packet);
-            this.emitter.emit(json.event, json.data);
+            this.emitter.emit<TReceive>(json.event, json.data);
           }
         }
       } catch (err) {
@@ -257,7 +257,7 @@ export class Client {
    * @param {string|symbol} event The event type
    * @param {Any} [data] Any value (object is recommended), passed to each handler
    */
-  emit<T = any>(event: EventType, data?: T): void {
+  emit<T = TSend>(event: EventType, data?: T): void {
     if (
       this.server.readyState == 'open' ||
       this.server.readyState == 'writeOnly'
@@ -276,7 +276,7 @@ export class Client {
    * @param {string|symbol} type Type of event to listen for, or `"*"` for all events
    * @param {Function} handler Function to call in response to given event
    */
-  on<T = any>(type: EventType, handler: Handler<T>) {
+  on<T = TReceive>(type: EventType, handler: Handler<T>) {
     this.emitter.on(type, handler);
   }
 
@@ -286,7 +286,7 @@ export class Client {
    * @param {string|symbol} type Type of event to unregister `handler` from, or `"*"`
    * @param {Function} handler Handler function to remove
    */
-  off<T = any>(type: EventType, handler: Handler<T>) {
+  off<T = TReceive>(type: EventType, handler: Handler<T>) {
     this.emitter.off(type, handler);
   }
 
