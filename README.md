@@ -20,7 +20,7 @@ The following example shows how to use `pipe-emitter` to communicate between two
 ```js
 // server.js: creates a pipe for client connections
 
-import { Server } from '..';
+import { Server } from '@josephuspaye/pipe-emitter';
 
 const server = new Server('pipe-emitter-example', {
   onError(error) {
@@ -57,7 +57,7 @@ console.log('pipe server started');
 ```js
 // client.js: connects to an open pipe
 
-import { Client } from '..';
+import { Client } from '@josephuspaye/pipe-emitter';
 
 const client = new Client('pipe-emitter-example', {
   onError(error) {
@@ -147,7 +147,7 @@ class Server<TSend = any, TReceive = any> {
    * @param event The event type
    * @param data  Any value (object is recommended), passed to each handler
    */
-  emit<T = TSend>(event: EventType, data?: T): void;
+  emit(event: EventType, data?: TSend): void;
 
   /**
    * Register an event handler for the given type on this pipe.
@@ -155,7 +155,7 @@ class Server<TSend = any, TReceive = any> {
    * @param type    Type of event to listen for, or `"*"` for all events
    * @param handler Function to call in response to given event
    */
-  on<T = TReceive>(type: EventType, handler: Handler<T>): void;
+  on(type: EventType, handler: Handler<TReceive>): void;
 
   /**
    * Remove an event handler for the given type on this pipe.
@@ -163,7 +163,7 @@ class Server<TSend = any, TReceive = any> {
    * @param type    Type of event to unregister `handler` from, or `"*"`
    * @param handler Handler function to remove
    */
-  off<T = TReceive>(type: EventType, handler: Handler<T>): void;
+  off(type: EventType, handler: Handler<TReceive>): void;
 
   /**
    * Remove all event listeners.
@@ -210,7 +210,7 @@ class Client<TSend = any, TReceive = any> {
    * @param event The event type
    * @param data  Any value (object is recommended), passed to each handler
    */
-  emit<T = TSend>(event: EventType, data?: T): void;
+  emit(event: EventType, data?: TSend): void;
 
   /**
    * Register an event handler for the given type on this pipe.
@@ -218,7 +218,7 @@ class Client<TSend = any, TReceive = any> {
    * @param type    Type of event to listen for, or `"*"` for all events
    * @param handler Function to call in response to given event
    */
-  on<T = TReceive>(type: EventType, handler: Handler<T>): void;
+  on(type: EventType, handler: Handler<TReceive>): void;
 
   /**
    * Remove an event handler for the given type on this pipe.
@@ -226,7 +226,7 @@ class Client<TSend = any, TReceive = any> {
    * @param type    Type of event to unregister `handler` from, or `"*"`
    * @param handler Handler function to remove
    */
-  off<T = TReceive>(type: EventType, handler: Handler<T>): void;
+  off(type: EventType, handler: Handler<TReceive>): void;
 
   /**
    * Remove all event listeners.

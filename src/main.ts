@@ -115,10 +115,10 @@ export class Server<TSend = any, TReceive = any> {
    * Emit the given event and data unto the pipe. Will throw an error of type "SEND_ERROR"
    * if a client socket is not writable (e.g. not ready or already closed).
    *
-   * @param {string|symbol} event The event type
-   * @param {Any} [data] Any value (object is recommended), passed to each handler
+   * @param event The event type
+   * @param data  Any value (object is recommended), passed to each handler
    */
-  emit<T = TSend>(event: EventType, data?: T): void {
+  emit(event: EventType, data?: TSend): void {
     for (const client of this.clients) {
       if (client.readyState === 'open' || client.readyState === 'writeOnly') {
         client.write(JSON.stringify({ event, data }) + PACKET_DELIMITER);
@@ -133,20 +133,20 @@ export class Server<TSend = any, TReceive = any> {
   /**
    * Register an event handler for the given type on this pipe.
    *
-   * @param {string|symbol} type Type of event to listen for, or `"*"` for all events
-   * @param {Function} handler Function to call in response to given event
+   * @param type    Type of event to listen for, or `"*"` for all events
+   * @param handler Function to call in response to given event
    */
-  on<T = TReceive>(type: EventType, handler: Handler<T>) {
+  on(type: EventType, handler: Handler<TReceive>) {
     this.emitter.on(type, handler);
   }
 
   /**
    * Remove an event handler for the given type on this pipe.
    *
-   * @param {string|symbol} type Type of event to unregister `handler` from, or `"*"`
-   * @param {Function} handler Handler function to remove
+   * @param type    Type of event to unregister `handler` from, or `"*"`
+   * @param handler Handler function to remove
    */
-  off<T = TReceive>(type: EventType, handler: Handler<T>) {
+  off(type: EventType, handler: Handler<TReceive>) {
     this.emitter.off(type, handler);
   }
 
@@ -254,10 +254,10 @@ export class Client<TSend = any, TReceive = any> {
    * Emit the given event and data unto the pipe. Will throw an error of type "SEND_ERROR"
    * if the server socket is not writable (e.g. not ready or already closed).
    *
-   * @param {string|symbol} event The event type
-   * @param {Any} [data] Any value (object is recommended), passed to each handler
+   * @param event The event type
+   * @param data Any value (object is recommended), passed to each handler
    */
-  emit<T = TSend>(event: EventType, data?: T): void {
+  emit(event: EventType, data?: TSend): void {
     if (
       this.server.readyState == 'open' ||
       this.server.readyState == 'writeOnly'
@@ -273,20 +273,20 @@ export class Client<TSend = any, TReceive = any> {
   /**
    * Register an event handler for the given type on this pipe.
    *
-   * @param {string|symbol} type Type of event to listen for, or `"*"` for all events
-   * @param {Function} handler Function to call in response to given event
+   * @param type    Type of event to listen for, or `"*"` for all events
+   * @param handler Function to call in response to given event
    */
-  on<T = TReceive>(type: EventType, handler: Handler<T>) {
+  on(type: EventType, handler: Handler<TReceive>) {
     this.emitter.on(type, handler);
   }
 
   /**
    * Remove an event handler for the given type on this pipe.
    *
-   * @param {string|symbol} type Type of event to unregister `handler` from, or `"*"`
-   * @param {Function} handler Handler function to remove
+   * @param type    Type of event to unregister `handler` from, or `"*"`
+   * @param handler Handler function to remove
    */
-  off<T = TReceive>(type: EventType, handler: Handler<T>) {
+  off(type: EventType, handler: Handler<TReceive>) {
     this.emitter.off(type, handler);
   }
 
