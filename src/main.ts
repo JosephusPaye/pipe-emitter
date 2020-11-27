@@ -219,16 +219,12 @@ export class Client {
     this.onDisconnect = options.onDisconnect;
 
     this.pipeName = `\\\\.\\pipe\\${pipeName}`;
-    this.server = net.createConnection(this.pipeName, () => {
-      this.onConnection(this.server);
-    }) as Socket;
-  }
 
-  /**
-   * Handle a connection to the server.
-   */
-  private onConnection(server: Socket) {
-    server.on('data', (buffer) => {
+    this.server = net.createConnection(this.pipeName, () => {
+      this.onConnect?.();
+    }) as Socket;
+
+    this.server.on('data', (buffer) => {
       try {
         const packets = buffer.toString().split(PACKET_DELIMITER);
 
@@ -244,16 +240,14 @@ export class Client {
       }
     });
 
-    server.on('error', (err) => {
+    this.server.on('error', (err) => {
       (err as any).type = 'SOCKET_ERROR';
       this.onError(err as PipeError);
     });
 
-    server.on('close', (hadError: boolean) => {
+    this.server.on('close', (hadError: boolean) => {
       this.onDisconnect?.(hadError);
     });
-
-    this.onConnect?.();
   }
 
   /**

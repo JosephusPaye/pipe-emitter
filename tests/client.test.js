@@ -31,6 +31,17 @@ test('constructor throws for lack of an error listener', () => {
 });
 
 test("triggers the onError() callback when there's an error", async () => {
+  // Test a client without a server
+  await asyncTest(({ done, useClient }) => {
+    useClient('pipe-emitter-test', {
+      onError(err) {
+        assert.is(err.type, 'SOCKET_ERROR');
+        done();
+      },
+    });
+  });
+
+  // Test malformed data from the server
   await asyncTest(({ done, useServer, useClient }) => {
     const server = useServer('pipe-emitter-test', {
       onError() {},
@@ -49,6 +60,7 @@ test("triggers the onError() callback when there's an error", async () => {
     });
   });
 
+  // Test an error on the server socket
   await asyncTest(({ done, useServer, useClient }) => {
     useServer('pipe-emitter-test', {
       onError() {},
